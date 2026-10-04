@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model PlannerSession {
+  id        String           @id @default(uuid()) @db.Uuid
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  answers   PlannerAnswer[]
+  reports   PlannerReport[]
+  projects  WebsiteProject[]
+}
+
+model PlannerAnswer {
+  id        String         @id @default(uuid()) @db.Uuid
+  session   PlannerSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String         @db.Uuid
+  step      String
+  payload   Json
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([sessionId, step])
+  @@index([sessionId])
+}
+
+model PlannerReport {
+  id                   String         @id @default(uuid()) @db.Uuid
+  session              PlannerSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId            String         @db.Uuid
+  lead                 Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  leadId               String?        @db.Uuid
+  status               String         @default("draft")
+  questionnaireVersion Int
+  pricingVersion       Int
+  rawAnswers           Json
+  normalizedAnswers    Json
+  selectedFeatures     Json
+  excludedFeatures     Json
+  priceBreakdown       Json
+  prototypeConfig      Json
+  totalPrice           Int
+  createdAt            DateTime       @default(now())
+
+  @@index([sessionId])
+  @@index([leadId])
+}
+
+model Lead {
+  id        String           @id @default(uuid()) @db.Uuid
+  whatsapp  String           @unique
+  name      String?
+  business  String?
+  email     String?
+  phone     String?
+  consentAt DateTime?
+  createdAt DateTime         @default(now())
+  reports   PlannerReport[]
+  projects  WebsiteProject[]
+}
+
+model BusinessCategory {
+  id          String            @id
+  name        String
+  description String
+  icon        String
+  sortOrder   Int               @default(0)
+  active      Boolean           @default(true)
+  templates   WebsiteTemplate[]
+  projects    WebsiteProject[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model WebsiteTemplate {
+  id                String           @id
+  categoryId        String
+  category          BusinessCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  name              String
+  description       String
+  previewImage      String?
+  config            Json
+  contentSchema     Json?
+  previewData       Json?
+  features          Json?
+  generatorManifest Json?
+  sortOrder         Int              @default(0)
+  pricePlan         String           @default("business")
+  version           Int              @default(1)
+  active            Boolean          @default(true)
+  projects          WebsiteProject[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([categoryId, active])
+}
+
+model WebsiteProject {
+  id               String           @id @default(uuid()) @db.Uuid
+  sessionId        String           @db.Uuid
+  session          PlannerSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  leadId           String?          @db.Uuid
+  lead             Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  categoryId       String
+  category         BusinessCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  templateId       String
+  template         WebsiteTemplate  @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  status           String           @default("draft")
+  currentStep      Int              @default(1)
+  businessData     Json?
+  previewConfig    Json?
+  templateSnapshot Json?
+  domainChecks     DomainCheck[]
+  checkout         Checkout?
+  orderSnapshot    OrderSnapshot?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([sessionId])
+  @@index([categoryId])
+  @@index([templateId])
+}
+
+model DomainCheck {
+  id        String         @id @default(uuid()) @db.Uuid
+  projectId String         @db.Uuid
+  project   WebsiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  domain    String
+  available Boolean
+  provider  String         @default("stub")
+  status    String         @default("checked")
+  checkedAt DateTime       @default(now())
+
+  @@index([projectId])
+  @@index([domain])
+}
+
+model OrderSnapshot {
+  id         String         @id @default(uuid()) @db.Uuid
+  projectId  String         @unique @db.Uuid
+  project    WebsiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  version    Int            @default(1)
+  payload    Json
+  createdAt  DateTime       @default(now())
+
+  @@index([createdAt])
+}
+
+model Checkout {
+  id            String         @id @default(uuid()) @db.Uuid
+  projectId     String         @unique @db.Uuid
+  project       WebsiteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  amount        Int
+  currency      String         @default("IDR")
+  priceSnapshot Json
+  status        String         @default("pending")
+  payments      Payment[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Payment {
+  id         String   @id @default(uuid()) @db.Uuid
+  checkoutId String   @db.Uuid
+  checkout   Checkout @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
+  method     String
+  provider   String   @default("stub")
+  reference  String?
+  amount     Int
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([checkoutId])
+}

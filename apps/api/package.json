@@ -1,0 +1,46 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "prisma generate",
+    "prebuild": "npm run build --prefix ../../packages/planner-engine",
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "lint": "eslint \"{src,test}/**/*.ts\"",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "templates:validate": "tsx scripts/import-templates.ts --dry-run",
+    "templates:import": "tsx scripts/import-templates.ts",
+    "test": "jest --runInBand",
+    "pretest": "prisma generate && npm run build --prefix ../../packages/planner-engine"
+  },
+  "dependencies": {
+    "@google/genai": "^2.24.0",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@prisma/client": "^6.0.0",
+    "@umkm/planner-engine": "file:../../packages/planner-engine",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
+    "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.0.0",
+    "prisma": "^6.0.0",
+    "supertest": "^7.1.0",
+    "ts-jest": "^29.4.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.0.0"
+  }
+}
