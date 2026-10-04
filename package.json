@@ -1,0 +1,17 @@
+{
+  "name": "umkm-platform",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @umkm/planner-engine --workspace @umkm/core-frontend",
+    "test:unit": "npm run test --workspace @umkm/planner-engine && npm run test --workspace @umkm/core-frontend",
+    "test:api": "npm run test --workspace api",
+    "test:e2e": "npm run test:e2e --workspace web",
+    "lint": "npm run lint --workspace web --workspace api",
+    "build:api": "npm run build --workspace @umkm/planner-engine && npm run build --workspace api"
+  }
+}
