@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: umkm_platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Supabase is not reachable from CI; everything below runs against the
+      # service container. No secrets are needed: AI tests force an empty key.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/umkm_platform
+      NEXT_PUBLIC_API_URL: http://localhost:3211/api
+      CORS_ORIGINS: http://localhost:3210
+      AI_PLANNER_CONTENT_ENABLED: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # postinstall runs `prisma generate` in apps/api; packages need building
+      # before anything reads their dist/.
+      - name: Install
+        run: npm ci
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Apply migrations and import templates
+        run: |
+          npm run prisma:deploy --workspace api
+          npm run templates:import --workspace api
+
+      - name: Unit tests (planner-engine, core-frontend)
+        run: npm run test:unit
+
+      - name: API tests
+        run: npm run test:api
+
+      - name: Typecheck
+        run: |
+          npx tsc --noEmit -p apps/api/tsconfig.json
+          npx tsc --noEmit -p apps/web/tsconfig.json
+
+      - name: Lint
+        run: npm run lint
+
+      # Builds apps/web with NEXT_PUBLIC_API_URL set (see pretest:e2e), then
+      # Playwright starts the web and API servers itself.
+      - name: End-to-end tests
+        run: npx playwright install --with-deps chromium && npm run test:e2e
